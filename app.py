@@ -98,7 +98,6 @@ elif page == "Keyword Rankings":
     st.caption("Google search keyword ranking positions by brand")
     st.divider()
 
-    # Chart 1 — Number of keywords each brand ranks for
     st.subheader("🏆 Number of Keywords Each Brand Ranks For")
     kw_count = keywords.groupby("Brand").size().reset_index(name="Keywords Ranked")
     fig1 = px.bar(
@@ -113,7 +112,6 @@ elif page == "Keyword Rankings":
 
     st.divider()
 
-    # Chart 2 — Heatmap
     st.subheader("📊 Keyword Ranking Heatmap")
     st.caption("Lower number = better ranking position")
     pivot = keywords.pivot_table(
@@ -134,7 +132,6 @@ elif page == "Keyword Rankings":
 
     st.divider()
 
-    # Raw table
     st.subheader("📋 Keyword Rankings Data")
     st.dataframe(keywords_filtered, use_container_width=True)
 
@@ -145,6 +142,53 @@ elif page == "SEO & Backlinks":
     st.title("🔗 SEO & Backlinks Analysis")
     st.caption("Backlink count and SEO performance scores by brand")
     st.divider()
+
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.subheader("🔗 Backlinks by Brand")
+        fig1 = px.bar(
+            backlinks.sort_values("Backlinks", ascending=False),
+            x="Brand",
+            y="Backlinks",
+            color="Brand",
+            title="Number of Backlinks per Brand",
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with col_right:
+        st.subheader("📈 SEO Performance Score")
+        fig2 = px.bar(
+            backlinks.sort_values("SEO_Performance", ascending=False),
+            x="Brand",
+            y="SEO_Performance",
+            color="Brand",
+            title="SEO Performance Score (%) by Brand",
+            labels={"SEO_Performance": "SEO Score (%)"},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("🔵 Backlinks vs SEO Performance")
+    fig3 = px.scatter(
+        backlinks,
+        x="Backlinks",
+        y="SEO_Performance",
+        color="Brand",
+        size="Backlinks",
+        hover_name="Brand",
+        title="Backlinks vs SEO Performance Score",
+        labels={"SEO_Performance": "SEO Score (%)"},
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("📋 SEO & Backlinks Data")
     st.dataframe(backlinks_filtered, use_container_width=True)
 
 # =====================
