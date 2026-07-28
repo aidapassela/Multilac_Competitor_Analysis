@@ -29,6 +29,10 @@ def load_data():
     social["Followers"] = social["Followers"].astype(str).str.replace(",", "").str.strip()
     social["Followers"] = pd.to_numeric(social["Followers"], errors="coerce")
 
+    # Clean No_of_Posts column
+    social["No_of_Posts"] = social["No_of_Posts"].astype(str).str.replace(",", "").str.strip()
+    social["No_of_Posts"] = pd.to_numeric(social["No_of_Posts"], errors="coerce")
+
     # Clean SEO column
     backlinks["SEO_Performance"] = backlinks["SEO_Performance"].astype(str).str.replace("%", "").str.strip()
     backlinks["SEO_Performance"] = pd.to_numeric(backlinks["SEO_Performance"], errors="coerce")
@@ -198,6 +202,75 @@ elif page == "Social Media":
     st.title("📱 Social Media Analysis")
     st.caption("Instagram and Facebook performance comparison")
     st.divider()
+
+    # Platform toggle
+    platform = st.radio(
+        "Select Platform",
+        ["Instagram", "Facebook"],
+        horizontal=True
+    )
+
+    platform_data = social[social["Platform"] == platform]
+
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.subheader(f"👥 {platform} Followers")
+        fig1 = px.bar(
+            platform_data.sort_values("Followers", ascending=False),
+            x="Brand",
+            y="Followers",
+            color="Brand",
+            title=f"{platform} Followers by Brand",
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with col_right:
+        st.subheader(f"❤️ {platform} Average Likes")
+        fig2 = px.bar(
+            platform_data.sort_values("Avg_Likes", ascending=False),
+            x="Brand",
+            y="Avg_Likes",
+            color="Brand",
+            title=f"{platform} Average Likes per Post",
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.divider()
+
+    col_left2, col_right2 = st.columns(2)
+
+    with col_left2:
+        st.subheader(f"📅 {platform} Posting Frequency")
+        fig3 = px.bar(
+            platform_data.sort_values("Post_Frequency", ascending=False),
+            x="Brand",
+            y="Post_Frequency",
+            color="Brand",
+            title=f"{platform} Post Frequency (Posts per Day)",
+            labels={"Post_Frequency": "Posts per Day"},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+
+    with col_right2:
+        st.subheader(f"📝 {platform} Number of Posts")
+        fig4 = px.bar(
+            platform_data.sort_values("No_of_Posts", ascending=False),
+            x="Brand",
+            y="No_of_Posts",
+            color="Brand",
+            title=f"{platform} Total Number of Posts",
+            labels={"No_of_Posts": "Number of Posts"},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig4, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("📋 Social Media Data")
     st.dataframe(social_filtered, use_container_width=True)
 
 # =====================
@@ -208,3 +281,4 @@ elif page == "Google Ratings":
     st.caption("Star ratings and total review counts by brand")
     st.divider()
     st.dataframe(google_filtered, use_container_width=True)
+    
