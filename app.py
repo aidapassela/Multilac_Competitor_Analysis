@@ -203,7 +203,6 @@ elif page == "Social Media":
     st.caption("Instagram and Facebook performance comparison")
     st.divider()
 
-    # Platform toggle
     platform = st.radio(
         "Select Platform",
         ["Instagram", "Facebook"],
@@ -280,5 +279,57 @@ elif page == "Google Ratings":
     st.title("⭐ Google Map Ratings")
     st.caption("Star ratings and total review counts by brand")
     st.divider()
+
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.subheader("⭐ Star Ratings by Brand")
+        fig1 = px.bar(
+            google.sort_values("Star_Rating", ascending=False),
+            x="Brand",
+            y="Star_Rating",
+            color="Brand",
+            title="Google Star Rating by Brand",
+            labels={"Star_Rating": "Star Rating"},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        fig1.update_layout(yaxis=dict(range=[3.5, 5]))
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with col_right:
+        st.subheader("📝 Total Reviews by Brand")
+        fig2 = px.bar(
+            google.sort_values("Total_Reviews", ascending=False),
+            x="Brand",
+            y="Total_Reviews",
+            color="Brand",
+            title="Total Google Reviews by Brand",
+            labels={"Total_Reviews": "Total Reviews"},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("🔵 Star Rating vs Total Reviews")
+    fig3 = px.scatter(
+        google,
+        x="Total_Reviews",
+        y="Star_Rating",
+        color="Brand",
+        size="Total_Reviews",
+        hover_name="Brand",
+        title="Star Rating vs Total Reviews",
+        labels={
+            "Star_Rating": "Star Rating",
+            "Total_Reviews": "Total Reviews"
+        },
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("📋 Google Ratings Data")
     st.dataframe(google_filtered, use_container_width=True)
     
