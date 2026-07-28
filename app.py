@@ -164,4 +164,3 @@ elif page == "Google Ratings":
     st.caption("Star ratings and total review counts by brand")
     st.divider()
     st.dataframe(google_filtered, use_container_width=True)
-    
