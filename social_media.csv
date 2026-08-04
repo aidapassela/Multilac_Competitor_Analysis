@@ -1,11 +1,11 @@
-Brand,Platform,Followers,Post_Frequency,Posting_Frequency,Avg_Likes,No_of_Posts
-Nippon Paints,Instagram,"2,193",0.05,Posts roughly twice a month,1.19,"2,189"
-Nippon Paints,Facebook,"204,000",0.19,Posts roughly once a week,57.7,4300
-DULUX,Instagram,503,0.86,Posts every 2 days,4.31,454
-DULUX,Facebook,"6,700,000",1,Posts every day,115.5,2400
-Asian Paints ,Instagram,"4,552",0.16,Posts roughly once a week,7.19,"1,370"
-Asian Paints ,Facebook,"247,000",0.5,Posts every 2 days,98.4,2600
-JAT,Instagram,113,1.77,Posts every day,2,119
-JAT,Facebook,"66,000",1.1,Posts every day,151.9,147
-Multilac,Instagram,"4,409",0.59,Posts every 2 days,20.56,"1,191"
-Multilac,Facebook,"127,000",0.4,Posts every 4 days,77.9,1800
+Brand,Platform,Followers,Post_Frequency,Posting_Frequency,Avg_Likes,Avg_Likes_Count,No_of_Posts,July_Posts
+Nippon Paints,Instagram,"2,192",0.26,Posts roughly about 5 times a week,2,Last 20 post,"2,193",8
+Nippon Paints,Facebook,"204,000",0.19,Posts roughly once a week,26.13,Last 30 days,4300,11
+DULUX,Instagram,504,0.5,Posts every 2 days,4.31,Last 20 post,458,15
+DULUX,Facebook,"6,700,000",1,Posts every day,74.6,Last 30 days,2400,20
+Asian Paints ,Instagram,"4,593",0.06,Posts roughly once a week,7.19,Last 20 post,"1,371",2
+Asian Paints ,Facebook,"247,000",0.5,Posts every 2 days,47.5,Last 30 days,2600,15
+JAT,Instagram,133,1.77,Posts every day,2,Last 20 post,140,28
+JAT,Facebook,"9,600",1.1,Posts every day,450.6,Last 30 days,156,27
+Multilac,Instagram,"4,414",0.59,Posts every 2 days,20.94,Last 20 post,"1,194",8
+Multilac,Facebook,"127,000",0.4,Posts every 4 days,2.19,Last 30 days,1800,10
