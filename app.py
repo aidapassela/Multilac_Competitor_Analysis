@@ -82,8 +82,8 @@ def load_data():
         social[col] = social[col].astype(str).str.replace(",", "").str.strip()
         social[col] = pd.to_numeric(social[col], errors="coerce")
 
-    social["Avg_Likes"]   = pd.to_numeric(social["Avg_Likes"],   errors="coerce")
-    social["July_Posts"]  = pd.to_numeric(social["July_Posts"],  errors="coerce")
+    social["Avg_Likes"]     = pd.to_numeric(social["Avg_Likes"],     errors="coerce")
+    social["August_Posts"]  = pd.to_numeric(social["August_Posts"],  errors="coerce")
     social["Post_Frequency"] = pd.to_numeric(social["Post_Frequency"], errors="coerce")
 
     backlinks["SEO_Performance"] = (
@@ -170,8 +170,8 @@ if page == "Home":
     ml_fb  = social[(social["Brand"] == "Multilac") & (social["Platform"] == "Facebook")].iloc[0]
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("SEO Score",           f"{int(ml_seo['SEO_Performance'])}%", "Highest among all")
-    c2.metric("Backlinks",           f"{int(ml_seo['Backlinks'])}",        "2nd highest")
+    c1.metric("SEO Score",           f"{int(ml_seo['SEO_Performance'])}%", "2nd highest")
+    c2.metric("Backlinks",           f"{int(ml_seo['Backlinks'])}",        "Lowest of 5")
     c3.metric("Keywords Ranked",     f"{len(ml_kw)}",                      "incl. #1 lead safe")
     c4.metric("Google Rating",       f"⭐ {ml_g['Star_Rating']}",          f"{int(ml_g['Total_Reviews'])} reviews")
     c5.metric("Instagram Followers", f"{int(ml_ig['Followers']):,}")
@@ -180,19 +180,21 @@ if page == "Home":
 
     st.markdown("""
     <div class="multilac-box">
-    🟢 <b>Multilac Strengths:</b> Multilac leads all competitors in SEO performance (73%)
-    and has a strong backlink count (189). Multilac uniquely ranks #1 for
+    🟢 <b>Multilac Strengths:</b> Multilac uniquely ranks #1 for
     "lead safe paint Sri Lanka" — a key differentiator no competitor holds.
-    Instagram engagement (avg 20.94 likes/post) is the highest among comparable local brands.
+    Instagram engagement (avg 15.5 likes/post) is the highest among comparable local brands,
+    and Facebook engagement (avg 246.1 likes/post) is now nearly on par with category leader JAT (251.6) —
+    a major turnaround in content performance on both platforms.
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
     <div class="warning-box">
-    ⚠️ <b>Areas to Improve:</b> Multilac is absent from 6 out of 10 category keywords.
-    Nippon Paints ranks #1 on almost every major buying keyword.
-    Facebook average likes (2.19) is significantly lower than competitors —
-    content quality and boosting strategy on Facebook needs urgent attention.
+    ⚠️ <b>Areas to Improve:</b> Multilac is absent from 4 out of 9 category keywords.
+    Nippon Paints and DULUX still dominate the most-searched buying keywords.
+    Multilac's backlink count (43) is now the lowest among all five brands, and its
+    SEO performance score (71%) has slipped to 2nd behind Asian Paints (98%) —
+    backlink building and on-page SEO both need renewed attention.
     </div>
     """, unsafe_allow_html=True)
 
@@ -233,7 +235,7 @@ elif page == "Keyword Rankings":
     st.markdown("""
     <div class="insight-box">
     💡 <b>Insight:</b> Nippon Paints and DULUX dominate keyword rankings.
-    Multilac ranks for 4 keywords including the unique "lead safe paint Sri Lanka"
+    Multilac ranks for 5 keywords including the unique "lead safe paint Sri Lanka"
     at position #1 — a strong niche advantage worth promoting further.
     </div>
     """, unsafe_allow_html=True)
@@ -317,10 +319,11 @@ elif page == "SEO & Backlinks":
         st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown("""
-    <div class="multilac-box">
-    🟢 <b>Multilac Strength:</b> Multilac leads in SEO performance with 73% —
-    the highest among all competitors. JAT has the most backlinks (276) but
-    a lower SEO score (53%), suggesting Multilac has better quality on-page optimisation.
+    <div class="warning-box">
+    ⚠️ <b>Multilac Watch-out:</b> Asian Paints now leads SEO performance with 98%,
+    well ahead of Multilac's 71% (2nd place). Multilac also has the fewest backlinks (43)
+    of all five brands, while DULUX leads with 173. Multilac's on-page SEO is still
+    solid, but its backlink profile is now the biggest gap versus competitors.
     </div>
     """, unsafe_allow_html=True)
 
@@ -339,7 +342,7 @@ elif page == "SEO & Backlinks":
     st.markdown("""
     <div class="insight-box">
     💡 <b>Quadrant reading:</b> Ideal position is top-right (high backlinks + high SEO score).
-    Multilac is top-left — strong SEO but fewer backlinks than JAT.
+    Multilac sits bottom-left — decent SEO score but the lowest backlink count of the group.
     Priority action: build more backlinks from local hardware, construction,
     and lifestyle sites to move toward the top-right quadrant.
     </div>
@@ -362,9 +365,9 @@ elif page == "Social Media":
     platform_filtered = social_filtered[social_filtered["Platform"] == platform]
 
     if platform == "Instagram":
-        st.caption("📅 Avg Likes based on last 20 posts | July Posts = posts published in July 2026")
+        st.caption("📅 Avg Likes based on last 20 posts | August Posts = posts published in August 2026")
     else:
-        st.caption("📅 Avg Likes based on last 30 days | July Posts = posts published in July 2026")
+        st.caption("📅 Avg Likes based on last 30 days | August Posts = posts published in August 2026")
 
     st.divider()
 
@@ -398,16 +401,16 @@ elif page == "Social Media":
 
     st.divider()
 
-    # Row 2 — July Posts and Total Posts
+    # Row 2 — August Posts and Total Posts
     col_left2, col_right2 = st.columns(2)
     with col_left2:
-        st.subheader(f"📅 {platform} Posts in July 2026")
+        st.subheader(f"📅 {platform} Posts in August 2026")
         fig3 = px.bar(
-            platform_data.sort_values("July_Posts", ascending=False),
-            x="Brand", y="July_Posts", color="Brand",
-            title=f"{platform} Number of Posts — July 2026",
-            labels={"July_Posts": "Posts in July 2026"},
-            text="July_Posts",
+            platform_data.sort_values("August_Posts", ascending=False),
+            x="Brand", y="August_Posts", color="Brand",
+            title=f"{platform} Number of Posts — August 2026",
+            labels={"August_Posts": "Posts in August 2026"},
+            text="August_Posts",
             color_discrete_sequence=px.colors.qualitative.Set2
         )
         fig3.update_traces(textposition="outside")
@@ -455,20 +458,21 @@ elif page == "Social Media":
     if platform == "Instagram":
         st.markdown("""
         <div class="insight-box">
-        💡 <b>Instagram Insight:</b> JAT posts most frequently (every day) but has the lowest followers (133).
-        Multilac posts every 2 days and has the highest average likes (20.94) among comparable local brands —
+        💡 <b>Instagram Insight:</b> JAT posts most frequently (every day) but has the lowest followers (144).
+        Multilac posts every 2 days and has the highest average likes (15.5) among comparable local brands —
         strong content quality. Increasing to daily posting could significantly improve reach.
-        Asian Paints only posted 2 times in July 2026 — a major drop in activity.
+        Asian Paints only posted once in August 2026 — a major drop in activity.
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div class="insight-box">
-        💡 <b>Facebook Insight:</b> DULUX's 6.7M followers is a global page — not directly comparable.
+        <div class="multilac-box">
+        🟢 <b>Facebook Insight:</b> DULUX's 6.7M followers is a global page — not directly comparable.
         Among local brands, Asian Paints (247K) leads followed by Nippon Paints (204K) and Multilac (127K).
-        JAT has the highest average likes per post (450.6) on Facebook despite fewer followers —
-        their content resonates strongly with their audience.
-        Multilac's Facebook average likes (2.19) is critically low and needs immediate content improvement.
+        On engagement, though, Multilac has turned things around: its average Facebook likes per post (246.1)
+        are now nearly tied with category leader JAT (251.6), and well ahead of Nippon Paints (78.9),
+        DULUX (61.1), and Asian Paints (47.5) — a strong sign that Multilac's Facebook content quality
+        has significantly improved.
         </div>
         """, unsafe_allow_html=True)
 
@@ -534,7 +538,7 @@ elif page == "Google Ratings":
     st.markdown("""
     <div class="multilac-box">
     🟢 <b>Multilac Strength:</b> Multilac has the second highest review count (174)
-    behind Nippon Paints (247) — showing strong customer engagement.
+    behind Nippon Paints (248) — showing strong customer engagement.
     Actively encouraging customers to leave Google reviews could push Multilac
     to #1 in review volume, strengthening trust signals for new buyers.
     </div>
@@ -542,10 +546,11 @@ elif page == "Google Ratings":
 
     st.markdown("""
     <div class="insight-box">
-    💡 <b>Opportunity:</b> JAT leads in star rating (4.4) despite only 55 reviews.
-    DULUX has a good rating (4.3) but only 39 reviews — very low visibility.
-    Multilac's combination of solid rating (4.2) AND high review count (174)
-    is a strong trust position that should be highlighted in all marketing materials.
+    💡 <b>Opportunity:</b> JAT and DULUX are tied for the top star rating (4.4), but on very
+    different review volumes — JAT has 54 reviews while DULUX has just 18, meaning DULUX's
+    strong rating carries little visibility. Multilac's combination of a solid rating (4.2)
+    AND the 2nd highest review count (174) is a strong trust position that should be
+    highlighted in all marketing materials.
     </div>
     """, unsafe_allow_html=True)
 
