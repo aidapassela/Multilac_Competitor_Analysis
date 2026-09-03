@@ -95,6 +95,88 @@ def load_data():
 
 google, keywords, social, backlinks = load_data()
 
+# --- Dynamic insight helpers ---------------------------------------------
+# These replace hand-typed numbers in the insight boxes below, so the
+# narrative text stays correct automatically whenever the CSVs are refreshed.
+
+def ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+def rank_of(df: pd.DataFrame, col: str, brand: str, ascending: bool = False):
+    """Returns (1-indexed rank of `brand` on `col`, the fully sorted df)."""
+    sorted_df = df.sort_values(col, ascending=ascending).reset_index(drop=True)
+    rank = int(sorted_df.index[sorted_df["Brand"] == brand][0]) + 1
+    return rank, sorted_df
+
+MULTILAC = "Multilac"
+FOLLOWER_OUTLIER_THRESHOLD = 1_000_000  # e.g. DULUX's global FB page
+
+def compute_insights(google, keywords, social, backlinks):
+    ins = {}
+    ins["n_brands"] = backlinks["Brand"].nunique()
+
+    # --- SEO ---
+    ins["seo_ml_rank"], seo_sorted = rank_of(backlinks, "SEO_Performance", MULTILAC)
+    ins["seo_leader"] = seo_sorted.iloc[0]
+    ins["seo_ml_value"] = backlinks.loc[backlinks["Brand"] == MULTILAC, "SEO_Performance"].iloc[0]
+
+    # --- Backlinks ---
+    ins["bl_ml_rank"], bl_sorted = rank_of(backlinks, "Backlinks", MULTILAC)
+    ins["bl_leader"] = bl_sorted.iloc[0]
+    ins["bl_ml_value"] = backlinks.loc[backlinks["Brand"] == MULTILAC, "Backlinks"].iloc[0]
+
+    # --- Keywords ---
+    ins["total_kw"] = keywords["Key word"].nunique()
+    ml_kw = keywords[keywords["Brand"] == MULTILAC]
+    ins["ml_kw_count"] = len(ml_kw)
+    ins["ml_kw_missing"] = ins["total_kw"] - ins["ml_kw_count"]
+    ins["ml_kw_number1"] = ml_kw[ml_kw["Rank"] == 1]["Key word"].tolist()
+    kw_counts = keywords.groupby("Brand").size().sort_values(ascending=False)
+    ins["kw_leader_brand"] = kw_counts.index[0]
+    ins["kw_leader_count"] = int(kw_counts.iloc[0])
+
+    # --- Instagram ---
+    ig = social[social["Platform"] == "Instagram"]
+    ins["ig_n"] = len(ig)
+    ins["ig_ml_rank"], ig_sorted = rank_of(ig, "Avg_Likes", MULTILAC)
+    ins["ig_leader"] = ig_sorted.iloc[0]
+    ins["ig_ml_value"] = ig.loc[ig["Brand"] == MULTILAC, "Avg_Likes"].iloc[0]
+    ins["ig_lowest_followers"] = ig.sort_values("Followers").iloc[0]
+    ins["ig_most_frequent"] = ig.sort_values("Post_Frequency", ascending=False).iloc[0]
+    ins["ig_least_active_month"] = ig.sort_values("August_Posts").iloc[0]
+
+    # --- Facebook (exclude global/outlier pages from local follower comparisons) ---
+    fb = social[social["Platform"] == "Facebook"]
+    ins["fb_n"] = len(fb)
+    fb_local = fb[fb["Followers"] <= FOLLOWER_OUTLIER_THRESHOLD]
+    fb_global = fb[fb["Followers"] > FOLLOWER_OUTLIER_THRESHOLD]
+    ins["fb_global"] = fb_global
+    ins["fb_local_followers_sorted"] = fb_local.sort_values("Followers", ascending=False)
+    ins["fb_ml_rank"], fb_sorted = rank_of(fb, "Avg_Likes", MULTILAC)
+    ins["fb_leader"] = fb_sorted.iloc[0]
+    ins["fb_ml_value"] = fb.loc[fb["Brand"] == MULTILAC, "Avg_Likes"].iloc[0]
+    ins["fb_sorted"] = fb_sorted
+
+    # --- Google Ratings ---
+    ins["rev_ml_rank"], rev_sorted = rank_of(google, "Total_Reviews", MULTILAC)
+    ins["rev_leader"] = rev_sorted.iloc[0]
+    ins["rev_ml_value"] = int(google.loc[google["Brand"] == MULTILAC, "Total_Reviews"].iloc[0])
+    star_sorted = google.sort_values("Star_Rating", ascending=False)
+    top_star_value = star_sorted.iloc[0]["Star_Rating"]
+    top_star_brands = star_sorted[star_sorted["Star_Rating"] == top_star_value]
+    ins["top_star_value"] = top_star_value
+    ins["top_star_brands"] = top_star_brands
+    ins["low_visibility_high_rating"] = top_star_brands.sort_values("Total_Reviews").iloc[0]
+    ins["ml_star"] = google.loc[google["Brand"] == MULTILAC, "Star_Rating"].iloc[0]
+
+    return ins
+
+INSIGHTS = compute_insights(google, keywords, social, backlinks)
+
 # --- Logo Map ---
 LOGO_MAP = {
     "Multilac":      BASE_DIR / "logos/multilac_logo.jpg",
@@ -169,32 +251,60 @@ if page == "Home":
     ml_ig  = social[(social["Brand"] == "Multilac") & (social["Platform"] == "Instagram")].iloc[0]
     ml_fb  = social[(social["Brand"] == "Multilac") & (social["Platform"] == "Facebook")].iloc[0]
 
+    ins = INSIGHTS
+
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("SEO Score",           f"{int(ml_seo['SEO_Performance'])}%", "2nd highest")
-    c2.metric("Backlinks",           f"{int(ml_seo['Backlinks'])}",        "Lowest of 5")
-    c3.metric("Keywords Ranked",     f"{len(ml_kw)}",                      "incl. #1 lead safe")
+    c1.metric("SEO Score",           f"{int(ml_seo['SEO_Performance'])}%",
+              f"{ordinal(ins['seo_ml_rank'])} of {ins['n_brands']}")
+    c2.metric("Backlinks",           f"{int(ml_seo['Backlinks'])}",
+              f"{ordinal(ins['bl_ml_rank'])} of {ins['n_brands']}")
+    c3.metric("Keywords Ranked",     f"{len(ml_kw)}",
+              f"of {ins['total_kw']} tracked")
     c4.metric("Google Rating",       f"⭐ {ml_g['Star_Rating']}",          f"{int(ml_g['Total_Reviews'])} reviews")
     c5.metric("Instagram Followers", f"{int(ml_ig['Followers']):,}")
 
     st.divider()
 
-    st.markdown("""
+    # Build strength / improvement bullets dynamically from where Multilac ranks
+    metrics = [
+        ("SEO performance", ins["seo_ml_rank"], ins["n_brands"],
+         f"{int(ins['seo_ml_value'])}% — {ins['seo_leader']['Brand']} leads at {int(ins['seo_leader']['SEO_Performance'])}%"),
+        ("Backlink count", ins["bl_ml_rank"], ins["n_brands"],
+         f"{int(ins['bl_ml_value'])} backlinks — {ins['bl_leader']['Brand']} leads with {int(ins['bl_leader']['Backlinks'])}"),
+        ("Instagram engagement", ins["ig_ml_rank"], ins["ig_n"],
+         f"{ins['ig_ml_value']:.2f} avg likes/post — {ins['ig_leader']['Brand']} leads at {ins['ig_leader']['Avg_Likes']:.2f}"),
+        ("Facebook engagement", ins["fb_ml_rank"], ins["fb_n"],
+         f"{ins['fb_ml_value']:.2f} avg likes/post — {ins['fb_leader']['Brand']} leads at {ins['fb_leader']['Avg_Likes']:.2f}"),
+        ("Google review volume", ins["rev_ml_rank"], ins["n_brands"],
+         f"{ins['rev_ml_value']} reviews — {ins['rev_leader']['Brand']} leads with {int(ins['rev_leader']['Total_Reviews'])}"),
+    ]
+    strengths   = [m for m in metrics if m[1] <= 2]
+    weaknesses  = [m for m in metrics if m[1] > 2]
+
+    strength_lines = "<br>".join(
+        f"• <b>{name}</b>: {ordinal(rank)} of {total} — {detail}" for name, rank, total, detail in strengths
+    )
+    weakness_lines = "<br>".join(
+        f"• <b>{name}</b>: {ordinal(rank)} of {total} — {detail}" for name, rank, total, detail in weaknesses
+    )
+    lead_safe_note = (
+        f' Multilac also uniquely ranks #1 for "{ins["ml_kw_number1"][0]}" — a key differentiator no competitor holds.'
+        if ins["ml_kw_number1"] else ""
+    )
+
+    st.markdown(f"""
     <div class="multilac-box">
-    🟢 <b>Multilac Strengths:</b> Multilac uniquely ranks #1 for
-    "lead safe paint Sri Lanka" — a key differentiator no competitor holds.
-    Instagram engagement (avg 15.5 likes/post) is the highest among comparable local brands,
-    and Facebook engagement (avg 246.1 likes/post) is now nearly on par with category leader JAT (251.6) —
-    a major turnaround in content performance on both platforms.
+    🟢 <b>Multilac Strengths</b> (top-2 of {ins['n_brands']} on these metrics):<br>
+    {strength_lines if strength_lines else "None of the tracked metrics currently rank Multilac in the top 2 — see improvement areas below."}
+    {lead_safe_note}
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
+    st.markdown(f"""
     <div class="warning-box">
-    ⚠️ <b>Areas to Improve:</b> Multilac is absent from 4 out of 9 category keywords.
-    Nippon Paints and DULUX still dominate the most-searched buying keywords.
-    Multilac's backlink count (43) is now the lowest among all five brands, and its
-    SEO performance score (71%) has slipped to 2nd behind Asian Paints (98%) —
-    backlink building and on-page SEO both need renewed attention.
+    ⚠️ <b>Areas to Improve:</b> Multilac is absent from {ins['ml_kw_missing']} out of {ins['total_kw']} category keywords
+    ({ins['kw_leader_brand']} ranks for the most, at {ins['kw_leader_count']}).<br>
+    {weakness_lines if weakness_lines else "Multilac leads or ties for 2nd on every other tracked metric this period."}
     </div>
     """, unsafe_allow_html=True)
 
@@ -232,11 +342,15 @@ elif page == "Keyword Rankings":
     fig1.update_layout(showlegend=False, plot_bgcolor="white", paper_bgcolor="white")
     st.plotly_chart(fig1, use_container_width=True)
 
-    st.markdown("""
+    ins = INSIGHTS
+    lead_safe_text = (
+        f' including the unique "{ins["ml_kw_number1"][0]}" at position #1 — a strong niche advantage worth promoting further'
+        if ins["ml_kw_number1"] else ""
+    )
+    st.markdown(f"""
     <div class="insight-box">
-    💡 <b>Insight:</b> Nippon Paints and DULUX dominate keyword rankings.
-    Multilac ranks for 5 keywords including the unique "lead safe paint Sri Lanka"
-    at position #1 — a strong niche advantage worth promoting further.
+    💡 <b>Insight:</b> {ins['kw_leader_brand']} ranks for the most keywords ({ins['kw_leader_count']} of {ins['total_kw']}).
+    Multilac ranks for {ins['ml_kw_count']} keyword{'s' if ins['ml_kw_count'] != 1 else ''}{lead_safe_text}.
     </div>
     """, unsafe_allow_html=True)
 
@@ -253,10 +367,13 @@ elif page == "Keyword Rankings":
     fig2.update_layout(height=500, paper_bgcolor="white")
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.markdown("""
+    ml_top_kw_text = (
+        f' Multilac\'s green cell on "{INSIGHTS["ml_kw_number1"][0]}" is its strongest digital asset with zero competition.'
+        if INSIGHTS["ml_kw_number1"] else " Multilac does not currently hold a #1 keyword position."
+    )
+    st.markdown(f"""
     <div class="insight-box">
-    💡 <b>Insight:</b> Green cells = top positions. Multilac's green cell on
-    "lead safe paint Sri Lanka" is its strongest digital asset with zero competition.
+    💡 <b>Insight:</b> Green cells = top positions.{ml_top_kw_text}
     White/grey = brand not ranked for that keyword.
     </div>
     """, unsafe_allow_html=True)
@@ -318,12 +435,25 @@ elif page == "SEO & Backlinks":
         fig2.update_layout(showlegend=False, plot_bgcolor="white", paper_bgcolor="white")
         st.plotly_chart(fig2, use_container_width=True)
 
-    st.markdown("""
-    <div class="warning-box">
-    ⚠️ <b>Multilac Watch-out:</b> Asian Paints now leads SEO performance with 98%,
-    well ahead of Multilac's 71% (2nd place). Multilac also has the fewest backlinks (43)
-    of all five brands, while DULUX leads with 173. Multilac's on-page SEO is still
-    solid, but its backlink profile is now the biggest gap versus competitors.
+    ins = INSIGHTS
+    seo_box_class = "multilac-box" if ins["seo_ml_rank"] == 1 else "warning-box"
+    seo_box_icon  = "🟢" if ins["seo_ml_rank"] == 1 else "⚠️"
+    seo_label     = "Strength" if ins["seo_ml_rank"] == 1 else "Watch-out"
+    seo_seo_line = (
+        f"Multilac leads SEO performance at {int(ins['seo_ml_value'])}%."
+        if ins["seo_ml_rank"] == 1 else
+        f"{ins['seo_leader']['Brand']} now leads SEO performance with {int(ins['seo_leader']['SEO_Performance'])}%, "
+        f"ahead of Multilac's {int(ins['seo_ml_value'])}% ({ordinal(ins['seo_ml_rank'])} place)."
+    )
+    seo_bl_line = (
+        f"Multilac also leads on backlinks with {int(ins['bl_ml_value'])}."
+        if ins["bl_ml_rank"] == 1 else
+        f"Multilac has {int(ins['bl_ml_value'])} backlinks ({ordinal(ins['bl_ml_rank'])} of {ins['n_brands']}), "
+        f"while {ins['bl_leader']['Brand']} leads with {int(ins['bl_leader']['Backlinks'])}."
+    )
+    st.markdown(f"""
+    <div class="{seo_box_class}">
+    {seo_box_icon} <b>Multilac {seo_label}:</b> {seo_seo_line} {seo_bl_line}
     </div>
     """, unsafe_allow_html=True)
 
@@ -339,10 +469,14 @@ elif page == "SEO & Backlinks":
     fig3.update_layout(plot_bgcolor="white", paper_bgcolor="white", height=420)
     st.plotly_chart(fig3, use_container_width=True)
 
-    st.markdown("""
+    n = INSIGHTS["n_brands"]
+    bl_pos = "top" if INSIGHTS["bl_ml_rank"] <= (n + 1) / 2 else "bottom"
+    seo_pos = "right" if INSIGHTS["seo_ml_rank"] <= (n + 1) / 2 else "left"
+    st.markdown(f"""
     <div class="insight-box">
     💡 <b>Quadrant reading:</b> Ideal position is top-right (high backlinks + high SEO score).
-    Multilac sits bottom-left — decent SEO score but the lowest backlink count of the group.
+    Multilac currently sits {bl_pos}-{seo_pos} — {ordinal(INSIGHTS['seo_ml_rank'])} of {n} on SEO score
+    and {ordinal(INSIGHTS['bl_ml_rank'])} of {n} on backlink count.
     Priority action: build more backlinks from local hardware, construction,
     and lifestyle sites to move toward the top-right quadrant.
     </div>
@@ -455,24 +589,43 @@ elif page == "Social Media":
 
     st.divider()
 
+    ins = INSIGHTS
     if platform == "Instagram":
-        st.markdown("""
+        ig_engagement_line = (
+            f"Multilac has the highest average likes ({ins['ig_ml_value']:.2f}) among all tracked brands."
+            if ins["ig_ml_rank"] == 1 else
+            f"Multilac's average likes ({ins['ig_ml_value']:.2f}) rank {ordinal(ins['ig_ml_rank'])} of {ins['ig_n']}, "
+            f"behind {ins['ig_leader']['Brand']} ({ins['ig_leader']['Avg_Likes']:.2f})."
+        )
+        st.markdown(f"""
         <div class="insight-box">
-        💡 <b>Instagram Insight:</b> JAT posts most frequently (every day) but has the lowest followers (144).
-        Multilac posts every 2 days and has the highest average likes (15.5) among comparable local brands —
-        strong content quality. Increasing to daily posting could significantly improve reach.
-        Asian Paints only posted once in August 2026 — a major drop in activity.
+        💡 <b>Instagram Insight:</b> {ins['ig_most_frequent']['Brand']} has the highest tracked posting
+        frequency this period ({ins['ig_most_frequent']['Posting_Frequency'].lower()}), while {ins['ig_lowest_followers']['Brand']}
+        has the fewest followers ({int(ins['ig_lowest_followers']['Followers']):,}) among tracked brands.
+        {ig_engagement_line}
+        {ins['ig_least_active_month']['Brand']} posted only {int(ins['ig_least_active_month']['August_Posts'])} time(s)
+        in August 2026 — the lowest posting volume this month.
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.markdown("""
-        <div class="multilac-box">
-        🟢 <b>Facebook Insight:</b> DULUX's 6.7M followers is a global page — not directly comparable.
-        Among local brands, Asian Paints (247K) leads followed by Nippon Paints (204K) and Multilac (127K).
-        On engagement, though, Multilac has turned things around: its average Facebook likes per post (246.1)
-        are now nearly tied with category leader JAT (251.6), and well ahead of Nippon Paints (78.9),
-        DULUX (61.1), and Asian Paints (47.5) — a strong sign that Multilac's Facebook content quality
-        has significantly improved.
+        global_note = (
+            f"{', '.join(ins['fb_global']['Brand'].tolist())}'s follower count is a global page and excluded from local comparisons. "
+            if len(ins["fb_global"]) > 0 else ""
+        )
+        local_leader = ins["fb_local_followers_sorted"].iloc[0]
+        fb_box_class = "multilac-box" if ins["fb_ml_rank"] <= 2 else "insight-box"
+        fb_icon = "🟢" if ins["fb_ml_rank"] <= 2 else "💡"
+        fb_engagement_line = (
+            f"Multilac leads Facebook engagement at {ins['fb_ml_value']:.2f} avg likes/post."
+            if ins["fb_ml_rank"] == 1 else
+            f"Multilac's average likes ({ins['fb_ml_value']:.2f}) rank {ordinal(ins['fb_ml_rank'])} of {ins['fb_n']}, "
+            f"close behind {ins['fb_leader']['Brand']} ({ins['fb_leader']['Avg_Likes']:.2f})."
+        )
+        st.markdown(f"""
+        <div class="{fb_box_class}">
+        {fb_icon} <b>Facebook Insight:</b> {global_note}Among local brands, {local_leader['Brand']}
+        ({int(local_leader['Followers']):,} followers) leads on follower count.
+        On engagement, {fb_engagement_line}
         </div>
         """, unsafe_allow_html=True)
 
@@ -535,22 +688,33 @@ elif page == "Google Ratings":
     )
     st.plotly_chart(fig3, use_container_width=True)
 
-    st.markdown("""
-    <div class="multilac-box">
-    🟢 <b>Multilac Strength:</b> Multilac has the second highest review count (174)
-    behind Nippon Paints (248) — showing strong customer engagement.
+    ins = INSIGHTS
+    rev_box_class = "multilac-box" if ins["rev_ml_rank"] <= 2 else "insight-box"
+    rev_icon = "🟢" if ins["rev_ml_rank"] <= 2 else "💡"
+    rev_line = (
+        f"Multilac leads all brands with {ins['rev_ml_value']} reviews."
+        if ins["rev_ml_rank"] == 1 else
+        f"Multilac has the {ordinal(ins['rev_ml_rank'])} highest review count ({ins['rev_ml_value']}) "
+        f"behind {ins['rev_leader']['Brand']} ({int(ins['rev_leader']['Total_Reviews'])}) — showing solid customer engagement."
+    )
+    st.markdown(f"""
+    <div class="{rev_box_class}">
+    {rev_icon} <b>Multilac Review Volume:</b> {rev_line}
     Actively encouraging customers to leave Google reviews could push Multilac
-    to #1 in review volume, strengthening trust signals for new buyers.
+    higher in review volume, strengthening trust signals for new buyers.
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
+    top_star_names = " and ".join(ins["top_star_brands"]["Brand"].tolist())
+    low_vis = ins["low_visibility_high_rating"]
+    tie_phrase = "are tied for" if len(ins["top_star_brands"]) > 1 else "leads with"
+    st.markdown(f"""
     <div class="insight-box">
-    💡 <b>Opportunity:</b> JAT and DULUX are tied for the top star rating (4.4), but on very
-    different review volumes — JAT has 54 reviews while DULUX has just 18, meaning DULUX's
-    strong rating carries little visibility. Multilac's combination of a solid rating (4.2)
-    AND the 2nd highest review count (174) is a strong trust position that should be
-    highlighted in all marketing materials.
+    💡 <b>Opportunity:</b> {top_star_names} {tie_phrase} the top star rating ({ins['top_star_value']}).
+    {low_vis['Brand']} has the fewest reviews ({int(low_vis['Total_Reviews'])}) among the top-rated brands,
+    meaning its strong rating carries relatively little visibility.
+    Multilac's combination of a {ins['ml_star']} rating AND the {ordinal(ins['rev_ml_rank'])} highest review count
+    ({ins['rev_ml_value']}) is a strong trust position that should be highlighted in all marketing materials.
     </div>
     """, unsafe_allow_html=True)
 
