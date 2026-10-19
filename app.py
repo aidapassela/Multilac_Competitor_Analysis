@@ -83,7 +83,7 @@ def load_data():
         social[col] = pd.to_numeric(social[col], errors="coerce")
 
     social["Avg_Likes"]     = pd.to_numeric(social["Avg_Likes"],     errors="coerce")
-    social["August_Posts"]  = pd.to_numeric(social["August_Posts"],  errors="coerce")
+    social["September_Posts"]  = pd.to_numeric(social["September_Posts"],  errors="coerce")
     social["Post_Frequency"] = pd.to_numeric(social["Post_Frequency"], errors="coerce")
 
     backlinks["SEO_Performance"] = (
@@ -147,7 +147,7 @@ def compute_insights(google, keywords, social, backlinks):
     ins["ig_ml_value"] = ig.loc[ig["Brand"] == MULTILAC, "Avg_Likes"].iloc[0]
     ins["ig_lowest_followers"] = ig.sort_values("Followers").iloc[0]
     ins["ig_most_frequent"] = ig.sort_values("Post_Frequency", ascending=False).iloc[0]
-    ins["ig_least_active_month"] = ig.sort_values("August_Posts").iloc[0]
+    ins["ig_least_active_month"] = ig.sort_values("September_Posts").iloc[0]
 
     # --- Facebook (exclude global/outlier pages from local follower comparisons) ---
     fb = social[social["Platform"] == "Facebook"]
@@ -499,9 +499,9 @@ elif page == "Social Media":
     platform_filtered = social_filtered[social_filtered["Platform"] == platform]
 
     if platform == "Instagram":
-        st.caption("📅 Avg Likes based on last 20 posts | August Posts = posts published in August 2026")
+        st.caption("📅 Avg Likes based on last 20 posts | September Posts = posts published in September 2026")
     else:
-        st.caption("📅 Avg Likes based on last 30 days | August Posts = posts published in August 2026")
+        st.caption("📅 Avg Likes based on last 30 days | September Posts = posts published in September 2026")
 
     st.divider()
 
@@ -535,16 +535,16 @@ elif page == "Social Media":
 
     st.divider()
 
-    # Row 2 — August Posts and Total Posts
+    # Row 2 — September Posts and Total Posts
     col_left2, col_right2 = st.columns(2)
     with col_left2:
-        st.subheader(f"📅 {platform} Posts in August 2026")
+        st.subheader(f"📅 {platform} Posts in September 2026")
         fig3 = px.bar(
-            platform_data.sort_values("August_Posts", ascending=False),
-            x="Brand", y="August_Posts", color="Brand",
-            title=f"{platform} Number of Posts — August 2026",
-            labels={"August_Posts": "Posts in August 2026"},
-            text="August_Posts",
+            platform_data.sort_values("September_Posts", ascending=False),
+            x="Brand", y="September_Posts", color="Brand",
+            title=f"{platform} Number of Posts — September 2026",
+            labels={"September_Posts": "Posts in September 2026"},
+            text="September_Posts",
             color_discrete_sequence=px.colors.qualitative.Set2
         )
         fig3.update_traces(textposition="outside")
@@ -603,8 +603,8 @@ elif page == "Social Media":
         frequency this period ({ins['ig_most_frequent']['Posting_Frequency'].lower()}), while {ins['ig_lowest_followers']['Brand']}
         has the fewest followers ({int(ins['ig_lowest_followers']['Followers']):,}) among tracked brands.
         {ig_engagement_line}
-        {ins['ig_least_active_month']['Brand']} posted only {int(ins['ig_least_active_month']['August_Posts'])} time(s)
-        in August 2026 — the lowest posting volume this month.
+        {ins['ig_least_active_month']['Brand']} posted only {int(ins['ig_least_active_month']['September_Posts'])} time(s)
+        in September 2026 — the lowest posting volume this month.
         </div>
         """, unsafe_allow_html=True)
     else:
